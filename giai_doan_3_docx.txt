@@ -1,0 +1,69 @@
+Giai đoạn 3: Triển khai Mô hình Máy học Serverless (AWS Lambda & API Gateway)
+Nhiệm vụ:
+ Đưa mô hình LightGBM lên môi trường production dưới dạng một API endpoint nhẹ, phản hồi nhanh và không cần quản trị máy chủ.
+Các bước thực hiện:
+Tạo một thư mục triển khai chứa file mô hình 
+lightgbm_demand_model.pkl
+, các bộ chuyển đổi mã hóa đặc trưng phân loại 
+label_encoders.pkl
+ và bộ chuẩn hóa 
+standard_scaler.pkl
+.
+Viết hàm xử lý chính (
+lambda_function.py
+) sử dụng thư viện 
+joblib
+ để load mô hình, nhận tham số đầu vào (nhập từ web hoặc chạy theo lô bao gồm: 
+store_id
+, 
+sku
+, 
+date
+, 
+total_discount_avg
+, 
+is_holiday
+, v.v.). Hàm sẽ tính toán các biến thời gian (
+month
+, 
+day_of_week
+), mã hóa biến phân loại thông qua encoder, chuẩn hóa qua scaler, thực hiện gọi hàm dự báo từ LightGBM và trả về kết quả số lượng dự đoán (
+predicted_quantity
+).
+Do dung lượng của các thư viện như 
+lightgbm
+, 
+scikit-learn
+, 
+pandas
+ khá lớn, tiến hành đóng gói mã nguồn và mô hình thành một 
+Docker Container Image
+ và đẩy lên 
+Amazon ECR (Elastic Container Registry)
+.
+Tạo một hàm 
+AWS Lambda
+ dựa trên Container Image từ ECR; cấu hình bộ nhớ RAM từ 1GB - 2GB để tối ưu tốc độ tính toán ma trận.
+Thiết lập 
+Amazon API Gateway
+ dạng REST API đứng trước AWS Lambda để làm cổng giao tiếp, bảo mật bằng API Key và định tuyến các request 
+/predict
+ từ ứng dụng Web đến Lambda.
+Giai đoạn 4: Phát triển Ứng dụng Web Portal Phân quyền (Full-Stack Web App)
+Nhiệm vụ:
+ Xây dựng hoàn chỉnh giao diện quản trị doanh nghiệp, tích hợp cơ chế phân quyền dựa trên vai trò (RBAC) và trực quan hóa dữ liệu chi tiết theo yêu cầu.
+Các bước thực hiện:
+Hệ thống Đăng nhập / Đăng xuất & Phân quyền (RBAC):
+ Xây dựng module Auth tích hợp JSON Web Token (JWT) hoặc kết nối AWS Cognito, phân chia rõ rệt các vai trò:
+Nhân viên bán hàng (Sales Staff):
+ Chỉ được quyền xem/tra cứu tab Transactions và Products thuộc phạm vi cửa hàng được chỉ định gán với mã nhân viên.
+Quản lý cửa hàng (Store Manager):
+ Được xem toàn bộ các tab dữ liệu của cửa hàng mình quản lý, có quyền chỉnh sửa/thống kê tab Discounts, Employees để điều phối kinh doanh nội bộ.
+Giám đốc (Director):
+ Quyền tối cao (Administrator), được phép truy cập và xem báo cáo tổng hợp, dữ liệu phân tích của tất cả các tab trên phạm vi toàn cầu.
+Phát triển giao diện cấu trúc Tab (Sidebar bên trái):
+Customers:
+ Hiển thị danh sách khách hàng dưới dạng bảng phân trang; biểu đồ Plotly thống kê cơ cấu giới tính và biểu đồ hình cột phân bố độ tuổi (
+age
+) của khách hàng.
+Discou

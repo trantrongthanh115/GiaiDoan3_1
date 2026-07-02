@@ -1,0 +1,290 @@
+📝 AWS CAPSTONE PROJECT PLANNING
+Dự án:
+ Hệ thống Phân tích và Dự báo Nhu cầu Thời trang Toàn cầu
+Dataset:
+ Global Fashion Retail Stores Dataset
+I. TỔNG QUAN DỰ ÁN & KIẾN TRÚC MỤC TIÊU
+1. Mục tiêu dự án
+Xây dựng một hệ thống phân tích dữ liệu bán lẻ (Business Intelligence) kết hợp học máy (Machine Learning) để dự báo nhu cầu tiêu thụ sản phẩm theo tuần tại từng cửa hàng trên thế giới, giúp tối ưu hóa lượng hàng tồn kho.
+Ứng dụng Trí tuệ nhân tạo tạo sinh (Generative AI) để tự động hóa quy trình thiết kế và minh họa sản phẩm từ văn bản mô tả.
+Triển khai giải pháp toàn diện trên nền tảng đám mây AWS đảm bảo tính sẵn sàng cao, bảo mật phân quyền (RBAC) và khả năng mở rộng linh hoạt.
+2. Kiến trúc đám mây đề xuất (Proposed AWS Architecture)
+Giao diện người dùng (Frontend):
+ HTML5, CSS3, JavaScript kết hợp Mapbox GL JS và Plotly phục vụ hiển thị bản đồ vị trí địa lý cùng đồ thị động.
+Máy chủ ứng dụng (Web/Backend Server):
+ AWS EC2 hosting ứng dụng full-stack (Node.js/Express hoặc Python FastAPI), được cấu hình qua Nginx Reverse Proxy và bảo mật mã hóa SSL (HTTPS).
+Tầng lưu trữ & Quản trị dữ liệu (Data Layer):
+ Amazon RDS (MySQL/PostgreSQL) lưu trữ dữ liệu có cấu trúc từ các bảng cốt lõi và dữ liệu phục vụ phân quyền.
+Tầng tính toán & Học máy (Serverless ML Layer):
+ AWS Lambda kết hợp Amazon API Gateway để đóng gói và thực thi mô hình LightGBM dưới dạng serverless API nhằm tiết kiệm chi phí và tăng tốc độ phản hồi.
+Tầng AI Tạo sinh & Lưu trữ tệp (GenAI & Storage Layer):
+ Amazon Bedrock (gọi mô hình sinh ảnh như Titan Image Generator hoặc Stable Diffusion) phối hợp với Amazon S3 để lưu trữ hình ảnh sản phẩm.
+II. HIỆN TRẠNG DỰ ÁN (PHASE 1: DONE)
+Hệ thống đã hoàn thành giai đoạn phân tích dữ liệu lớn ngoại tuyến (Offline Big Data Processing), huấn luyện mô hình máy học thành công và phát triển giao diện kiểm thử cục bộ (Local Prototype):
+1. Xử lý dữ liệu lớn & Kỹ nghệ đặc trưng (Feature Engineering)
+Khởi tạo thành công SparkSession để xử lý tập dữ liệu dung lượng lớn bao gồm 6 bảng chính: 
+customers
+, 
+discounts
+, 
+employees
+, 
+products
+, 
+stores
+, và 
+transactions
+.
+Thực hiện làm sạch dữ liệu, chuẩn hóa tên cột sang định dạng 
+snake_case
+, và xử lý dữ liệu khuyết thiếu cho các trường 
+size
+, 
+color
+ bằng giá trị xuất hiện nhiều nhất (Mode) nhóm theo 
+product_id
+.
+Trích xuất thành công các nhóm đặc trưng quan trọng phục vụ mô hình:
+Khách hàng & Sản phẩm:
+ Tính toán độ tuổi khách hàng (
+age
+), phân nhóm màu sắc sản phẩm (
+color_type
+ gồm 'Cor Unica' và 'Multi Color').
+Cửa hàng & Độ phủ:
+ Đo lường quy mô đa dạng của cửa hàng thông qua số lượng sản phẩm và SKU duy nhất (
+num_distinct_products
+, 
+num_distinct_skus
+); xác định độ bao phủ thị trường của mặt hàng (
+sku_store_coverage
+, 
+product_store_coverage
+).
+Tài chính & Chuỗi thời gian:
+ Quy đổi đơn giá bán từ các loại tiền tệ (EUR, CNY, GBP) sang đơn vị chuẩn USD (
+usd_price
+); tạo các đặc trưng trễ và trung bình trượt chuỗi thời gian (
+lag_1d
+, 
+lag_7d
+, 
+rolling_mean_7d
+, 
+rolling_std_7d
+).
+Bối cảnh thời gian:
+ Tích hợp dữ liệu ngày lễ quốc gia (
+is_holiday
+) dựa trên vị trí quốc gia của cửa hàng.
+2. Huấn luyện và Đánh giá Mô hình Dự đoán
+Thử nghiệm so sánh hiệu năng trên nhiều thuật toán bao gồm Linear Regression, SVR (Linear), Deep Neural Network (MLP), và LightGBM Regressor.
+Mô hình LightGBM Regressor đạt độ chính xác tối ưu nhất sau khi tích hợp biến ngày lễ (
+is_holiday
+), trở thành một trong các đặc trưng có tầm quan trọng hàng đầu (Feature Importance Gain) cùng với thuộc tính giảm giá (
+total_discount_avg
+).
+Đánh giá cấp độ tổng hợp chuỗi thời gian cho thấy mô hình đạt độ chính xác rất cao ở cấp độ Tuần (R2: 0.6454, WAPE: 22.58%) và cấp độ Tháng (R2: 0.8951, WAPE: 18.35%) khi dự báo chuỗi Store-SKU.
+Mô hình cùng toàn bộ các bộ tiền xử lý (
+standard_scaler.pkl
+, 
+label_encoders.pkl
+) đã được đóng gói và xuất ra file nhị phân (
+.pkl
+).
+3. Giao diện Demo cục bộ
+Xây dựng cấu trúc trang 
+index.html
+ tích hợp Mapbox API v2.15.0 để load bản đồ số.
+Sử dụng thư viện Plotly để thiết kế biểu đồ cột lồng nhau trực quan, thể hiện sự chênh lệch giữa số lượng "Thực tế" (Actual) và "Dự báo" (Forecast).
+Kiểm thử thành công việc hiển thị dữ liệu không gian và thuộc tính qua một tệp dữ liệu thu nhỏ 
+sample_data.json
+.
+III. KẾ HOẠCH HÀNH ĐỘNG CHI TIẾT (NEXT STEPS)
+Kế hoạch triển khai đưa hệ thống lên môi trường điện toán đám mây AWS được chia cụ thể thành 5 giai đoạn cốt lõi sau:
+Giai đoạn 1: Thiết lập Cơ sở dữ liệu và Quy trình ETL Cloud (Amazon RDS)
+Nhiệm vụ:
+ Chuyển đổi mô hình dữ liệu từ tệp CSV cục bộ sang hệ quản trị cơ sở dữ liệu đám mây hoạt động liên tục.
+Các bước thực hiện:
+Khởi tạo một cơ sở dữ liệu Amazon RDS (PostgreSQL hoặc MySQL) thuộc phân khúc 
+db.t3.medium
+ (hoặc cấu hình phù hợp với ngân sách dự án), kích hoạt tính năng tự động sao lưu.
+Thiết kế lược đồ cơ sở dữ liệu (Database Schema) gồm 6 bảng dữ liệu thô và thêm bảng phục vụ lưu trữ tài khoản người dùng, bảng lưu trữ kết quả dự báo chuỗi thời gian theo tuần.
+Viết mã nguồn chuyển dữ liệu (Data Migration) hoặc cấu hình AWS Glue/script Python để đẩy dữ liệu thô từ môi trường phát triển lên RDS.
+Cài đặt các truy vấn SQL để tự động cập nhật các trường dữ liệu xử lý đặc trưng (như quy đổi tỷ giá sang 
+usd_price
+, tính toán số SKU hoạt động tại cửa hàng) trực tiếp bên trong database.
+Giai đoạn 2: Tích hợp Generative AI và Quản lý tài nguyên đa phương tiện (AWS S3)
+Nhiệm vụ:
+ Tự động hóa việc tạo ra các hình ảnh minh họa cho sản phẩm thời trang dựa vào mô tả và lưu trữ tối ưu trên đám mây.
+Các bước thực hiện:
+Sử dụng dữ liệu từ cột mô tả sản phẩm bằng tiếng Anh (
+description_en
+) sẵn có trong bảng Products (ví dụ: "Sports Velvet Sports Jacket", "Luxurious Pink Denim") làm chuỗi văn bản gợi ý (Prompt).
+Xây dựng một module Python kết nối với dịch vụ 
+Amazon Bedrock
+ (gọi API mô hình 
+Titan Image Generator
+ hoặc 
+Stable Diffusion XL
+). Khi một sản phẩm mới được thêm vào hệ thống, module này sẽ tự động gửi prompt mô tả để sinh ra ảnh sản phẩm tương ứng.
+Khởi tạo một bucket 
+Amazon S3
+ bảo mật. Thiết lập mã nguồn Backend để tiếp nhận luồng dữ liệu hình ảnh (Image Stream) sinh ra từ AI và tải trực tiếp lên S3 bucket.
+Lưu trữ URL đại diện của hình ảnh trên S3 vào trường 
+image_url
+ thuộc bảng 
+products
+ trong Amazon RDS để Frontend liên kết hiển thị.
+Giai đoạn 3: Triển khai Mô hình Máy học Serverless (AWS Lambda & API Gateway)
+Nhiệm vụ:
+ Đưa mô hình LightGBM lên môi trường production dưới dạng một API endpoint nhẹ, phản hồi nhanh và không cần quản trị máy chủ.
+Các bước thực hiện:
+Tạo một thư mục triển khai chứa file mô hình 
+lightgbm_demand_model.pkl
+, các bộ chuyển đổi mã hóa đặc trưng phân loại 
+label_encoders.pkl
+ và bộ chuẩn hóa 
+standard_scaler.pkl
+.
+Viết hàm xử lý chính (
+lambda_function.py
+) sử dụng thư viện 
+joblib
+ để load mô hình, nhận tham số đầu vào (nhập từ web hoặc chạy theo lô bao gồm: 
+store_id
+, 
+sku
+, 
+date
+, 
+total_discount_avg
+, 
+is_holiday
+, v.v.). Hàm sẽ tính toán các biến thời gian (
+month
+, 
+day_of_week
+), mã hóa biến phân loại thông qua encoder, chuẩn hóa qua scaler, thực hiện gọi hàm dự báo từ LightGBM và trả về kết quả số lượng dự đoán (
+predicted_quantity
+).
+Do dung lượng của các thư viện như 
+lightgbm
+, 
+scikit-learn
+, 
+pandas
+ khá lớn, tiến hành đóng gói mã nguồn và mô hình thành một 
+Docker Container Image
+ và đẩy lên 
+Amazon ECR (Elastic Container Registry)
+.
+Tạo một hàm 
+AWS Lambda
+ dựa trên Container Image từ ECR; cấu hình bộ nhớ RAM từ 1GB - 2GB để tối ưu tốc độ tính toán ma trận.
+Thiết lập 
+Amazon API Gateway
+ dạng REST API đứng trước AWS Lambda để làm cổng giao tiếp, bảo mật bằng API Key và định tuyến các request 
+/predict
+ từ ứng dụng Web đến Lambda.
+Giai đoạn 4: Phát triển Ứng dụng Web Portal Phân quyền (Full-Stack Web App)
+Nhiệm vụ:
+ Xây dựng hoàn chỉnh giao diện quản trị doanh nghiệp, tích hợp cơ chế phân quyền dựa trên vai trò (RBAC) và trực quan hóa dữ liệu chi tiết theo yêu cầu.
+Các bước thực hiện:
+Hệ thống Đăng nhập / Đăng xuất & Phân quyền (RBAC):
+ Xây dựng module Auth tích hợp JSON Web Token (JWT) hoặc kết nối AWS Cognito, phân chia rõ rệt các vai trò:
+Nhân viên bán hàng (Sales Staff):
+ Chỉ được quyền xem/tra cứu tab Transactions và Products thuộc phạm vi cửa hàng được chỉ định gán với mã nhân viên.
+Quản lý cửa hàng (Store Manager):
+ Được xem toàn bộ các tab dữ liệu của cửa hàng mình quản lý, có quyền chỉnh sửa/thống kê tab Discounts, Employees để điều phối kinh doanh nội bộ.
+Giám đốc (Director):
+ Quyền tối cao (Administrator), được phép truy cập và xem báo cáo tổng hợp, dữ liệu phân tích của tất cả các tab trên phạm vi toàn cầu.
+Phát triển giao diện cấu trúc Tab (Sidebar bên trái):
+Customers:
+ Hiển thị danh sách khách hàng dưới dạng bảng phân trang; biểu đồ Plotly thống kê cơ cấu giới tính và biểu đồ hình cột phân bố độ tuổi (
+age
+) của khách hàng.
+Discounts:
+ Thống kê lịch sử áp dụng khuyến mãi, hiển thị biểu đồ phân tích mức chiết khấu trung bình (
+total_discount_avg
+).
+Employees:
+ Bảng thông tin nhân sự, số lượng nhân viên của từng store (
+number_of_employees
+), đi kèm biểu đồ cột đánh giá doanh số đóng góp của từng cá nhân.
+Products:
+ Danh sách lưới sản phẩm (Product Grid) hiển thị mã sản phẩm, phân loại (
+category
+, 
+sub_category
+, 
+color_type
+) và đính kèm 
+hình ảnh sản phẩm sinh ra bởi GenAI
+ lấy từ liên kết AWS S3.
+Stores:
+ Bảng dữ liệu thống kê tổng số cửa hàng, phân bố theo quốc gia và các chỉ số quy mô danh mục mặt hàng (
+num_distinct_skus
+, 
+num_distinct_products
+).
+Transactions:
+ Bảng hiển thị thông tin hóa đơn chi tiết, các bộ lọc nâng cao theo hình thức thanh toán (
+payment_method
+), loại tiền tệ và doanh thu quy đổi tương đương (
+usd_price
+, 
+line_total
+).
+Dashboard (Nâng cấp hệ thống bản đồ):
+ Kế thừa kiến trúc Mapbox đã xây dựng. Bản đồ hiển thị biểu tượng icon cho từng cửa hàng dựa trên tọa độ (
+latitude
+, 
+longitude
+) truy vấn từ cơ sở dữ liệu RDS. Khi người dùng nhấp chọn vào icon của một cửa hàng bất kỳ, hệ thống sẽ thực hiện một lệnh gọi API đến Backend để truy vấn dữ liệu dự báo. Kết quả trả về sẽ được vẽ bằng Plotly ngay trên màn hình phụ (overlay panel), hiển thị 
+đường biểu đồ dự báo nhu cầu theo tuần (Weekly Forecast)
+ của từng mặt hàng cụ thể (được gom nhóm theo năm và tuần giống như thuật toán kiểm thử).
+Giai đoạn 5: Triển khai Ứng dụng lên AWS EC2 & Tích hợp Toàn diện
+Nhiệm vụ:
+ Đưa mã nguồn Web app lên máy chủ Cloud Production và liên kết đồng bộ các dịch vụ AWS.
+Các bước thực hiện:
+Khởi chạy một máy chủ 
+Amazon EC2
+ instance (loại dòng 
+t3.large
+ hoặc tương đương) chạy hệ điều hành Ubuntu Server. Cấu hình 
+Security Group
+ cho phép nhận lưu lượng mạng ở cổng 80 (HTTP), 443 (HTTPS) và cổng dịch vụ nội bộ (ví dụ: 3000 hoặc 8000).
+Đẩy mã nguồn ứng dụng Web lên EC2 qua Git. Cấu hình trình quản lý tiến trình 
+PM2
+ hoặc đóng gói Docker để đảm bảo ứng dụng Backend chạy ngầm liên tục và tự động khởi động lại nếu gặp lỗi.
+Cấu hình 
+Nginx
+ làm máy chủ Proxy ngược (Reverse Proxy) điều hướng luồng truy cập từ cổng 80/443 vào ứng dụng. Sử dụng công cụ 
+Certbot
+ của 
+Let's Encrypt
+ để cài đặt chứng chỉ bảo mật SSL miễn phí, kích hoạt giao thức HTTPS bắt buộc.
+Cấu hình kiểm tra môi trường: Kết nối Web App trên EC2 kết nối an toàn tới cơ sở dữ liệu Amazon RDS qua chuỗi kết nối bảo mật (Environment Variables). Web App thực hiện gọi API Gateway để lấy kết quả dự báo từ Lambda, và gọi S3 để hiển thị ảnh sản phẩm.
+IV. TIẾN ĐỘ THỰC HIỆN DỰ KIẾN (PROJECT TIMELINE)
+Bản kế hoạch dự án kéo dài trong vòng 6 ngày, phân bổ nguồn lực tập trung như sau:
+Thiết lập Hạ tầng & CSDL Cloud
+Khởi tạo Amazon RDS, tạo bảng, phân quyền kết nối VPC mạng nội bộ an toàn.
+Xây dựng và chạy các script đẩy dữ liệu gốc từ CSV lên database đám mây.
+Phát triển Module GenAI & Lưu trữ S3
+Tạo Bucket S3, thiết lập cấu hình IAM Policy bảo mật quyền đọc ghi.
+Viết code kết nối Amazon Bedrock để tự động hóa sinh ảnh sản phẩm từ mô tả và lưu trữ vào S3.
+Serverless Deployment Mô hình Máy học
+Đóng gói LightGBM thành Docker Image, upload lên Amazon ECR.
+Tạo AWS Lambda từ Docker image, thiết lập cấu hình định tuyến qua Amazon API Gateway, tiến hành kiểm thử đơn vị (Unit Test) cho API 
+/predict
+.
+Xây dựng Module Auth & 6 Tab Quản trị Dữ liệu
+Phát triển logic phân quyền đăng nhập mạng RBAC (Sales, Manager, Director).
+Hoàn thiện giao diện hiển thị bảng, biểu đồ thống kê cho 6 tab: Customers, Discounts, Employees, Products, Stores, Transactions.
+Hoàn thiện Tab Dashboard Bản đồ & Trực quan Dự báo
+Liên kết dữ liệu RDS với Mapbox để hiển thị hệ thống icon cửa hàng tự động động.
+Lập trình logic bắt sự kiện click icon cửa hàng, gọi API Lambda để vẽ đồ thị dự báo nhu cầu theo tuần bằng Plotly.
+Triển khai EC2, Kiểm thử & Nghiệm thu
+Cài đặt server EC2, cấu hình Nginx, PM2, thiết lập HTTPS bảo mật.
+Kiểm thử tích hợp toàn hệ thống (End-to-End Testing), tối ưu hóa tốc độ phản hồi trang web và đóng gói tài liệu báo cáo AWS Capstone.
