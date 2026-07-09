@@ -1,5 +1,8 @@
 FROM public.ecr.aws/lambda/python:3.12
 
+# Install system dependencies for LightGBM (libgomp)
+RUN dnf install -y libgomp && dnf clean all
+
 # Copy requirements and install packages
 COPY requirements.txt ${LAMBDA_TASK_ROOT}/requirements.txt
 RUN pip install --upgrade pip && \
